@@ -1,4 +1,5 @@
 const BASE_URL = 'https://dummyjson.com';
+import axios from 'axios';
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,

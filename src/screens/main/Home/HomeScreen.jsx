@@ -59,14 +59,11 @@ const SORT_OPTIONS = [
   },
 ];
 
-// ---------- helpers ----------
 
 const slugToTitle = slug =>
   String(slug)
     .replace(/-/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase());
-
-// dummyjson categories kabhi string hoti hain, kabhi { slug, name } object
 const toCategory = item =>
   typeof item === 'string'
     ? { id: item, name: slugToTitle(item) }
@@ -83,9 +80,6 @@ const useDebouncedValue = (value, delay) => {
   return debounced;
 };
 
-// ---------- search + sort button ----------
-
-// Typing ka state yahin rakha hai, taaki har keystroke par poori HomeScreen re-render na ho
 const SearchRow = memo(({ value, onSearch, sortActive, onOpenSort }) => {
   const { colors } = useTheme();
   const [text, setText] = useState(value);
@@ -94,8 +88,6 @@ const SearchRow = memo(({ value, onSearch, sortActive, onOpenSort }) => {
   useEffect(() => {
     onSearch(debouncedText.trim());
   }, [debouncedText, onSearch]);
-
-  // Category select hone par parent query '' kar deta hai, to input bhi khaali ho
   useEffect(() => {
     if (value === '') {
       setText('');
@@ -147,8 +139,6 @@ const SearchRow = memo(({ value, onSearch, sortActive, onOpenSort }) => {
   );
 });
 
-// ---------- sticky block: search + sort + categories ----------
-
 const StickyControls = memo(
   ({
     query,
@@ -178,8 +168,6 @@ const StickyControls = memo(
   ),
 );
 
-// ---------- sort bottom sheet ----------
-
 const SortSheet = ({ visible, selectedId, onSelect, onClose }) => {
   const { colors } = useTheme();
 
@@ -192,7 +180,6 @@ const SortSheet = ({ visible, selectedId, onSelect, onClose }) => {
       onRequestClose={onClose}
     >
       <Pressable className="flex-1 justify-end bg-black/50" onPress={onClose}>
-        {/* Andar ka empty onPress, taaki sheet par tap karne se backdrop close na ho */}
         <Pressable
           className="rounded-t-3xl bg-surface px-5 pb-8 pt-4"
           onPress={() => {}}
@@ -283,8 +270,6 @@ const Greeting = memo(() => {
   );
 });
 
-// ---------- screen ----------
-
 const HomeScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation()
@@ -296,14 +281,10 @@ const HomeScreen = () => {
 
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
-  const [status, setStatus] = useState('loading'); // 'loading' | 'idle' | 'error'
+  const [status, setStatus] = useState('loading');
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-
-  // Local cart. Aapka cart context ho to ye state hata kar wahan se lo
   const [cart, setCart] = useState({});
-
-  // Filter badalne par purani request ka result ignore karne ke liye
   const generation = useRef(0);
   const loadMoreLock = useRef(false);
 
@@ -311,9 +292,6 @@ const HomeScreen = () => {
     () => SORT_OPTIONS.find(option => option.id === sortId)?.api ?? null,
     [sortId],
   );
-
-  // dummyjson mein search aur category ek saath nahi chalte.
-  // Isliye: search karo to category 'All' ho jati hai, aur category chuno to search clear.
   const fetchPage = useCallback(
     (skip, signal) => {
       const options = { limit: PAGE_SIZE, skip, sort, signal };
@@ -353,8 +331,6 @@ const HomeScreen = () => {
     },
     [fetchPage],
   );
-
-  // Query, category ya sort badle to list dobara shuru se
   useEffect(() => {
     const controller = new AbortController();
 
@@ -366,7 +342,6 @@ const HomeScreen = () => {
     return () => controller.abort();
   }, [loadFirstPage]);
 
-  // Categories sirf ek baar
   useEffect(() => {
     const controller = new AbortController();
 
@@ -403,7 +378,6 @@ const HomeScreen = () => {
       });
       setTotal(data.total);
     } catch {
-      // Silently ignore. User phir scroll karega to dobara try hoga
     } finally {
       if (current === generation.current) {
         loadMoreLock.current = false;
@@ -422,8 +396,6 @@ const HomeScreen = () => {
     setStatus('loading');
     loadFirstPage();
   }, [loadFirstPage]);
-
-  // ----- handlers (stable, taaki memo components re-render na hon) -----
 
   const handleSearch = useCallback(text => {
     setQuery(text);
@@ -472,9 +444,6 @@ const HomeScreen = () => {
       return { ...prev, [product.id]: nextQty };
     });
   }, []);
-
-  // ----- list data -----
-  // Pehla item hamesha 'controls' hai (sticky). Uske baad 2-2 products ki rows.
   const listData = useMemo(() => {
     const items = [{ type: 'controls', key: 'controls' }];
 
@@ -611,9 +580,7 @@ const HomeScreen = () => {
         renderItem={renderItem}
         ListHeaderComponent={Greeting}
         ListFooterComponent={listFooter}
-        // ListHeaderComponent index 0 hai, isliye pehla data item (controls) index 1 hai
         stickyHeaderIndices={[1]}
-        // Android par default true hota hai aur sticky header gayab kar sakta hai
         removeClippedSubviews={false}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}

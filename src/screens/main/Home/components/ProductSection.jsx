@@ -11,8 +11,6 @@ import {
 import AppText from '../../../../components/ui/AppText';
 import AppButton from '../../../../components/ui/AppButton';
 import { useTheme } from '../../../../context/ThemeContext';
-
-// NativeWind shadow classes se ye exact values match nahi hote, isliye style me
 const SHADOW = {
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 2 },
