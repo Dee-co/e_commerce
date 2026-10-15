@@ -11,6 +11,10 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		1432D5C3EDE74FE59A0D72C2 /* Eina01-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 030F9A8E1B7A42A788510DBA /* Eina01-SemiBold.ttf */; };
+		BFE1F481C63F440BB8CAB935 /* Eina01-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 04821D63AB154E9EB4D3188A /* Eina01-Light.ttf */; };
+		6476B1F4EC444F6F9CF40271 /* Eina01-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 90FFBBF51DE44A48A47299A8 /* Eina01-Bold.ttf */; };
+		3F1C623C67044E33BDD1B0FE /* Eina01-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 950BD54583294B019A26A831 /* Eina01-Regular.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +28,10 @@
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = e_commerce/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = e_commerce/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		030F9A8E1B7A42A788510DBA /* Eina01-SemiBold.ttf */ = {isa = PBXFileReference; name = "Eina01-SemiBold.ttf"; path = "../assets/fonts/Eina01-SemiBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		04821D63AB154E9EB4D3188A /* Eina01-Light.ttf */ = {isa = PBXFileReference; name = "Eina01-Light.ttf"; path = "../assets/fonts/Eina01-Light.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		90FFBBF51DE44A48A47299A8 /* Eina01-Bold.ttf */ = {isa = PBXFileReference; name = "Eina01-Bold.ttf"; path = "../assets/fonts/Eina01-Bold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		950BD54583294B019A26A831 /* Eina01-Regular.ttf */ = {isa = PBXFileReference; name = "Eina01-Regular.ttf"; path = "../assets/fonts/Eina01-Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -74,6 +82,7 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				9BCD9A15F8C540DA9C43E742 /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -96,6 +105,18 @@
 			);
 			path = Pods;
 			sourceTree = "<group>";
+		};
+		9BCD9A15F8C540DA9C43E742 /* Resources */ = {
+			isa = "PBXGroup";
+			children = (
+				030F9A8E1B7A42A788510DBA /* Eina01-SemiBold.ttf */,
+				04821D63AB154E9EB4D3188A /* Eina01-Light.ttf */,
+				90FFBBF51DE44A48A47299A8 /* Eina01-Bold.ttf */,
+				950BD54583294B019A26A831 /* Eina01-Regular.ttf */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+			path = "";
 		};
 /* End PBXGroup section */
 
@@ -159,6 +180,10 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				1432D5C3EDE74FE59A0D72C2 /* Eina01-SemiBold.ttf in Resources */,
+				BFE1F481C63F440BB8CAB935 /* Eina01-Light.ttf in Resources */,
+				6476B1F4EC444F6F9CF40271 /* Eina01-Bold.ttf in Resources */,
+				3F1C623C67044E33BDD1B0FE /* Eina01-Regular.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

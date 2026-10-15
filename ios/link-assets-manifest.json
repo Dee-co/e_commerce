@@ -1,0 +1,21 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Eina01-Bold.ttf",
+      "sha1": "4b36ede991477b9a46f12dfc86811e7f1e0f6bcb"
+    },
+    {
+      "path": "assets/fonts/Eina01-Light.ttf",
+      "sha1": "3e545f8ff4bdc1d8b8dba0f42d5d4f6cb75a16cc"
+    },
+    {
+      "path": "assets/fonts/Eina01-Regular.ttf",
+      "sha1": "0988e804f3563027ba2df306fe1aa41184efe06f"
+    },
+    {
+      "path": "assets/fonts/Eina01-SemiBold.ttf",
+      "sha1": "71edfba369a88b07e9834911532f7acf2d27be8b"
+    }
+  ]
+}
