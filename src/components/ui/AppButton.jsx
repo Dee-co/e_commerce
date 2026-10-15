@@ -10,7 +10,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 const SIZES = {
   sm: {
-    height: 44,
+    height: 35,
     paddingHorizontal: 16,
     borderRadius: 10,
     icon: 42,

@@ -1,16 +1,18 @@
 import React, { memo } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import {
+  Heart,
   ImageOff,
   Minus,
   Plus,
   ShoppingCart,
   Star,
 } from 'lucide-react-native';
-
 import AppText from '../../../../components/ui/AppText';
 import AppButton from '../../../../components/ui/AppButton';
+import AppQuantityButton from '../../../../components/ui/AppQuantityButton';
 import { useTheme } from '../../../../context/ThemeContext';
+import { useDispatch } from 'react-redux';
 const SHADOW = {
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 2 },
@@ -18,7 +20,6 @@ const SHADOW = {
   shadowRadius: 6,
   elevation: 3,
 };
-
 const toTitleCase = (text = '') =>
   text
     .trim()
@@ -27,8 +28,7 @@ const toTitleCase = (text = '') =>
       word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
     );
 
-const formatPrice = value =>
-  `₹${Number(value ?? 0).toLocaleString('en-IN')}`;
+const formatPrice = value => `₹${Number(value ?? 0).toLocaleString('en-IN')}`;
 
 const getUnitLabel = variant => {
   const unitValue = Number(variant?.unitValue ?? 0);
@@ -53,6 +53,8 @@ const ProductSection = ({
   product,
   quantity = 0,
   onPress,
+  isWishlisted = false,
+  onWishlist,
   onAddToCart,
   onIncrement,
   onDecrement,
@@ -76,6 +78,7 @@ const ProductSection = ({
   const metaText = hasOptions
     ? `${variants.length} options`
     : getUnitLabel(variants[0]);
+
   const renderAction = () => {
     if (!isAvailable) {
       return (
@@ -89,34 +92,15 @@ const ProductSection = ({
         />
       );
     }
-
     if (quantity > 0) {
       return (
-        <View className="h-10 flex-row items-center justify-between rounded-[10px] bg-primary px-1">
-          <Pressable
-            onPress={() => onDecrement?.(product)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Remove one ${product?.name}`}
-            className="h-9 w-9 items-center justify-center"
-          >
-            <Minus size={18} color={colors.black} />
-          </Pressable>
-
-          <AppText variant="button" color={colors.black}>
-            {quantity}
-          </AppText>
-
-          <Pressable
-            onPress={() => onIncrement?.(product)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Add one more ${product?.name}`}
-            className="h-9 w-9 items-center justify-center"
-          >
-            <Plus size={18} color={colors.black} />
-          </Pressable>
-        </View>
+        <AppQuantityButton
+          quantity={quantity}
+          min={0}
+          size="sm"
+          onDecrement={() => onDecrement?.(product)}
+          onIncrement={() => onIncrement?.(product)}
+        />
       );
     }
 
@@ -181,17 +165,30 @@ const ProductSection = ({
             </View>
           )}
           {rating > 0 && (
-            <View className="absolute right-2 top-2 flex-row items-center rounded-lg bg-surface px-1.5 py-[3px]">
+            <View className="absolute right-2 bottom-2 flex-row items-center rounded-lg bg-surface px-1.5 py-[3px]">
               <Star size={12} color={colors.primary} fill={colors.primary} />
-              <AppText
-                variant="caption"
-                className="ml-[3px] font-app-semibold"
-              >
+              <AppText variant="caption" className="ml-[3px] font-app-semibold">
                 {rating.toFixed(1)}
               </AppText>
             </View>
           )}
         </View>
+        <Pressable
+          onPress={() => onWishlist?.(product)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'
+          }
+          accessibilityState={{ selected: isWishlisted }}
+          hitSlop={6}
+          className="absolute right-2 top-2 z-10 h-9 w-9 items-center justify-center rounded-full border border-border bg-surface"
+        >
+          <Heart
+            size={19}
+            color={isWishlisted ? colors.error : colors.textSecondary}
+            fill={isWishlisted ? colors.error : 'transparent'}
+          />
+        </Pressable>
         <View className="grow justify-between p-3">
           <View>
             <AppText

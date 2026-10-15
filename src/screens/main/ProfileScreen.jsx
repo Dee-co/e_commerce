@@ -14,13 +14,12 @@ import {
 import AppSafeAreaView from '../../components/ui/AppSafeAreaView';
 import AppText from '../../components/ui/AppText';
 import AppButton from '../../components/ui/AppButton';
-import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 
 const ProfileScreen = () => {
   const { colors } = useTheme();
-  const { user, logout } = useAuth();
+  const  user  = "";
   const [loggingOut, setLoggingOut] = useState(false);
   const navigation = useNavigation();
   const firstLetter = user?.name?.trim()?.charAt(0)?.toUpperCase() || 'U';
@@ -34,14 +33,7 @@ const ProfileScreen = () => {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          try {
-            setLoggingOut(true);
-            await logout();
-          } catch (error) {
-            console.log('LOGOUT ERROR:', error);
-          } finally {
-            setLoggingOut(false);
-          }
+         
         },
       },
     ]);

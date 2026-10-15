@@ -1,5 +1,11 @@
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
 import {
   ActivityIndicator,
   Alert,
@@ -8,7 +14,9 @@ import {
   ScrollView,
   View,
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import {
   ArrowLeft,
   Heart,
@@ -21,16 +29,26 @@ import {
   Truck,
 } from 'lucide-react-native';
 
+import { useDispatch, useSelector } from 'react-redux';
+
 import AppText from '../../components/ui/AppText';
 import { useTheme } from '../../context/ThemeContext';
 import { getProductById } from '../../services/productService';
 import { normalizeProduct } from '../../utils/normalizeProduct';
+
+import { addToCart } from '../../store/slices/cartSlice';
+import { toggleWishlist } from '../../store/slices/wishlistSlice';
 
 const formatPrice = value =>
   `₹${Number(value ?? 0).toLocaleString('en-IN')}`;
 
 const ProductDetailsScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
+  const dispatch = useDispatch();
+
+  const wishlistItems = useSelector(
+    state => state.wishlist.items,
+  );
 
   const productId =
     route?.params?.productId ?? route?.params?.product?.id;
@@ -38,11 +56,15 @@ const ProductDetailsScreen = ({ navigation, route }) => {
   const [product, setProduct] = useState(
     route?.params?.product ?? null,
   );
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [isFavourite, setIsFavourite] = useState(false);
+
+  const isFavourite = wishlistItems.some(
+    item => item.id === product?.id,
+  );
 
   const loadProduct = useCallback(async signal => {
     if (productId == null) {
@@ -87,20 +109,35 @@ const ProductDetailsScreen = ({ navigation, route }) => {
       ? product.images
       : [product.thumbnail ?? product.image?.url];
 
-    return [...new Set(list.filter(Boolean))];
+    return [...new Set(list.filter(
+      image => typeof image === 'string' && image.length > 0,
+    ))];
   }, [product]);
 
-  const price = Number(product?.price?.min ?? product?.price ?? 0);
-  const discountPercentage = Number(product?.discountPercentage ?? 0);
+  const price = Number(
+    product?.price?.min ??
+    product?.price ??
+    product?.variants?.[0]?.price ??
+    0,
+  );
+
+  const discountPercentage = Number(
+    product?.discountPercentage ?? 0,
+  );
 
   const originalPrice =
     discountPercentage > 0 && discountPercentage < 100
       ? price / (1 - discountPercentage / 100)
       : price;
 
-  const rating = Number(product?.rating?.value ?? product?.rating ?? 0);
+  const rating = Number(
+    product?.rating?.value ?? product?.rating ?? 0,
+  );
+
   const stock = Number(product?.stock ?? 0);
-  const available = product?.available !== false && stock > 0;
+
+  const available =
+    product?.available !== false && stock > 0;
 
   const titleClass = isDark
     ? 'text-[#F0FDF4]'
@@ -116,12 +153,44 @@ const ProductDetailsScreen = ({ navigation, route }) => {
 
   const sectionClass = `rounded-2xl border p-4 ${cardClass}`;
 
-  const handleAddToCart = () => {
-    // TODO: Connect this action to the shared cart state.
-    // HomeScreen currently keeps cart quantity in local state.
+  // Wishlist: use shared Redux state.
+  const handleToggleWishlist = () => {
+    if (!product) return;
+
+    dispatch(toggleWishlist(product));
+
     Alert.alert(
-      'Product ready',
-      'Product details are loaded. Connect the shared cart state to enable adding this item to your cart.',
+      isFavourite ? 'Removed from Wishlist' : 'Added to Wishlist',
+      isFavourite
+        ? 'Product removed from your wishlist.'
+        : 'Product added to your wishlist.',
+    );
+  };
+
+  // Cart: add the selected quantity to the shared Redux cart.
+  const handleAddToCart = () => {
+    if (!product || !available) return;
+
+    for (let i = 0; i < quantity; i += 1) {
+      dispatch(addToCart(product));
+    }
+
+    Alert.alert(
+      'Added to Cart',
+      `${product.title ?? product.name} (${quantity}) added to your cart.`,
+      [
+        {
+          text: 'Continue Shopping',
+          style: 'cancel',
+        },
+        {
+          text: 'View Cart',
+          onPress: () =>
+            navigation.navigate('MainTabs', {
+              screen: 'Cart',
+            }),
+        },
+      ],
     );
   };
 
@@ -129,6 +198,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" color={colors.primary} />
+
         <AppText className={`mt-3 ${secondaryClass}`}>
           Loading product details...
         </AppText>
@@ -147,7 +217,10 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         </Pressable>
 
         <View className="flex-1 items-center justify-center">
-          <AppText variant="title" className="text-center text-lg">
+          <AppText
+            variant="title"
+            className="text-center text-lg"
+          >
             Something went wrong
           </AppText>
 
@@ -165,7 +238,10 @@ const ProductDetailsScreen = ({ navigation, route }) => {
             }}
             className="rounded-xl bg-primary px-6 py-3"
           >
-            <AppText color={colors.onPrimary} className="font-semibold">
+            <AppText
+              color={colors.onPrimary}
+              className="font-semibold"
+            >
               Try again
             </AppText>
           </Pressable>
@@ -192,10 +268,12 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         </AppText>
 
         <Pressable
-          onPress={() => setIsFavourite(value => !value)}
+          onPress={handleToggleWishlist}
           accessibilityRole="button"
           accessibilityLabel={
-            isFavourite ? 'Remove from favourites' : 'Add to favourites'
+            isFavourite
+              ? 'Remove from favourites'
+              : 'Add to favourites'
           }
           className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
         >
@@ -212,7 +290,11 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         contentContainerClassName="px-5 pb-6"
       >
         {/* Main image */}
-        <View className={`relative mt-2 overflow-hidden rounded-3xl ${isDark ? 'bg-[#1B3528]' : 'bg-[#E8F4EB]'}`}>
+        <View
+          className={`relative mt-2 overflow-hidden rounded-3xl ${
+            isDark ? 'bg-[#1B3528]' : 'bg-[#E8F4EB]'
+          }`}
+        >
           {images.length > 0 ? (
             <Image
               source={{ uri: images[selectedImage] }}
@@ -301,13 +383,17 @@ const ProductDetailsScreen = ({ navigation, route }) => {
               color={colors.warning}
               fill={colors.warning}
             />
+
             <AppText className={`ml-1 font-semibold ${titleClass}`}>
               {rating.toFixed(1)}
             </AppText>
+
             <AppText className={`ml-2 ${secondaryClass}`}>
               ({product.reviews?.length ?? 0} reviews)
             </AppText>
+
             <View className="mx-2 h-1 w-1 rounded-full bg-border" />
+
             <AppText
               className={available ? 'text-green-600' : 'text-red-500'}
             >
@@ -331,6 +417,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
                 >
                   {formatPrice(originalPrice)}
                 </AppText>
+
                 <AppText className="ml-2 text-sm font-semibold text-green-600">
                   Save {Math.round(discountPercentage)}%
                 </AppText>
@@ -348,6 +435,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
           <AppText variant="title" className="mb-2 text-base">
             Product description
           </AppText>
+
           <AppText
             color={colors.textSecondary}
             className="leading-6"
@@ -360,6 +448,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
               <AppText color={colors.textMuted}>
                 Category:
               </AppText>
+
               <AppText className="ml-2 font-medium">
                 {product.category.name ?? product.category}
               </AppText>
@@ -371,68 +460,89 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         <View className={`mt-4 gap-4 ${sectionClass}`}>
           <View className="flex-row items-start">
             <Truck size={22} color={colors.primary} />
+
             <View className="ml-3 flex-1">
               <AppText variant="button">
                 Shipping information
               </AppText>
+
               <AppText
                 color={colors.textSecondary}
                 className="mt-1"
               >
-                {product.shippingInformation || 'Check shipping availability at checkout.'}
+                {product.shippingInformation ||
+                  'Check shipping availability at checkout.'}
               </AppText>
             </View>
           </View>
 
           <View className="flex-row items-start">
             <RotateCcw size={22} color={colors.primary} />
+
             <View className="ml-3 flex-1">
               <AppText variant="button">
                 Return policy
               </AppText>
+
               <AppText
                 color={colors.textSecondary}
                 className="mt-1"
               >
-                {product.returnPolicy || 'See return policy at checkout.'}
+                {product.returnPolicy ||
+                  'See return policy at checkout.'}
               </AppText>
             </View>
           </View>
 
           <View className="flex-row items-start">
             <ShieldCheck size={22} color={colors.primary} />
+
             <View className="ml-3 flex-1">
               <AppText variant="button">
                 Warranty
               </AppText>
+
               <AppText
                 color={colors.textSecondary}
                 className="mt-1"
               >
-                {product.warrantyInformation || 'Warranty information not available.'}
+                {product.warrantyInformation ||
+                  'Warranty information not available.'}
               </AppText>
             </View>
           </View>
         </View>
 
         {/* Quantity */}
-        <View className={`mt-4 flex-row items-center justify-between ${sectionClass}`}>
+        <View
+          className={`mt-4 flex-row items-center justify-between ${sectionClass}`}
+        >
           <View>
             <AppText variant="button">Quantity</AppText>
-            <AppText color={colors.textSecondary} className="mt-1 text-xs">
+
+            <AppText
+              color={colors.textSecondary}
+              className="mt-1 text-xs"
+            >
               Select how many you need
             </AppText>
           </View>
 
           <View className="flex-row items-center rounded-xl border border-border">
             <Pressable
-              onPress={() => setQuantity(value => Math.max(1, value - 1))}
+              onPress={() =>
+                setQuantity(value => Math.max(1, value - 1))
+              }
               disabled={quantity <= 1}
               className="h-10 w-10 items-center justify-center"
             >
               <Minus
                 size={17}
-                color={quantity <= 1 ? colors.textMuted : colors.textPrimary}
+                color={
+                  quantity <= 1
+                    ? colors.textMuted
+                    : colors.textPrimary
+                }
               />
             </Pressable>
 
@@ -441,7 +551,9 @@ const ProductDetailsScreen = ({ navigation, route }) => {
             </AppText>
 
             <Pressable
-              onPress={() => setQuantity(value => Math.min(stock, value + 1))}
+              onPress={() =>
+                setQuantity(value => Math.min(stock, value + 1))
+              }
               disabled={!available || quantity >= stock}
               className="h-10 w-10 items-center justify-center"
             >
@@ -475,12 +587,14 @@ const ProductDetailsScreen = ({ navigation, route }) => {
                   <AppText variant="button">
                     {review.reviewerName ?? 'Customer'}
                   </AppText>
+
                   <View className="flex-row items-center">
                     <Star
                       size={13}
                       color={colors.warning}
                       fill={colors.warning}
                     />
+
                     <AppText className="ml-1 text-sm">
                       {review.rating}/5
                     </AppText>
@@ -507,6 +621,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
           <AppText color={colors.textSecondary}>
             Total price
           </AppText>
+
           <AppText variant="title" className="text-xl">
             {formatPrice(price * quantity)}
           </AppText>
@@ -522,6 +637,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
           }`}
         >
           <ShoppingCart size={19} color={colors.onPrimary} />
+
           <AppText
             color={colors.onPrimary}
             className="font-bold"

@@ -8,18 +8,21 @@ import React, {
 } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Animated,
   Modal,
   Pressable,
   RefreshControl,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowUpDown, Check, Search, X } from 'lucide-react-native';
-
+import { ArrowUpDown, Check, Moon, Search, Sun, X } from 'lucide-react-native';
+import SortSheet, { SORT_OPTIONS } from './components/SortSheet';
+import { useNavigation } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
 import AppButton from '../../../components/ui/AppButton';
 import AppText from '../../../components/ui/AppText';
+import AppList from '../../../components/ui/AppList';
+import AppSafeAreaView from '../../../components/ui/AppSafeAreaView';
 import { useTheme } from '../../../context/ThemeContext';
 import { normalizeProduct } from '../../../utils/normalizeProduct';
 import {
@@ -28,42 +31,22 @@ import {
   getProductsByCategory,
   searchProducts,
 } from '../../../services/productService';
+import {
+  addToCart,
+  decrementQuantity,
+  incrementQuantity,
+} from '../../../store/slices/cartSlice';
+import { toggleWishlist } from '../../../store/slices/wishlistSlice';
 import CategorySection from './components/CategorySection';
 import ProductSection from './components/ProductSection';
-import { useNavigation } from '@react-navigation/native';
-
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 400;
-
-const SORT_OPTIONS = [
-  { id: 'relevance', label: 'Relevance', api: null },
-  {
-    id: 'price-asc',
-    label: 'Price: Low to High',
-    api: { sortBy: 'price', order: 'asc' },
-  },
-  {
-    id: 'price-desc',
-    label: 'Price: High to Low',
-    api: { sortBy: 'price', order: 'desc' },
-  },
-  {
-    id: 'rating',
-    label: 'Rating: High to Low',
-    api: { sortBy: 'rating', order: 'desc' },
-  },
-  {
-    id: 'name',
-    label: 'Name: A to Z',
-    api: { sortBy: 'title', order: 'asc' },
-  },
-];
-
-
+const SPACER = { id: 'spacer', isSpacer: true };
 const slugToTitle = slug =>
   String(slug)
     .replace(/-/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase());
+
 const toCategory = item =>
   typeof item === 'string'
     ? { id: item, name: slugToTitle(item) }
@@ -79,12 +62,10 @@ const useDebouncedValue = (value, delay) => {
 
   return debounced;
 };
-
 const SearchRow = memo(({ value, onSearch, sortActive, onOpenSort }) => {
   const { colors } = useTheme();
   const [text, setText] = useState(value);
   const debouncedText = useDebouncedValue(text, SEARCH_DEBOUNCE_MS);
-
   useEffect(() => {
     onSearch(debouncedText.trim());
   }, [debouncedText, onSearch]);
@@ -93,7 +74,6 @@ const SearchRow = memo(({ value, onSearch, sortActive, onOpenSort }) => {
       setText('');
     }
   }, [value]);
-
   return (
     <View className="flex-row items-center px-5">
       <View className="h-11 flex-1 flex-row items-center rounded-xl border border-border bg-surface px-3">
@@ -120,7 +100,6 @@ const SearchRow = memo(({ value, onSearch, sortActive, onOpenSort }) => {
           </Pressable>
         )}
       </View>
-
       <Pressable
         onPress={onOpenSort}
         accessibilityRole="button"
@@ -131,6 +110,7 @@ const SearchRow = memo(({ value, onSearch, sortActive, onOpenSort }) => {
           size={18}
           color={sortActive ? colors.primary : colors.textPrimary}
         />
+
         {sortActive && (
           <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
         )}
@@ -138,7 +118,6 @@ const SearchRow = memo(({ value, onSearch, sortActive, onOpenSort }) => {
     </View>
   );
 });
-
 const StickyControls = memo(
   ({
     query,
@@ -149,8 +128,7 @@ const StickyControls = memo(
     sortActive,
     onOpenSort,
   }) => (
-    // bg-background zaroori hai, warna neeche ke products peeche se dikhenge
-    <View className="border-b border-border bg-background pb-3 pt-2">
+    <View className="mb-5 border-b border-border bg-background pb-3 pt-2">
       <SearchRow
         value={query}
         onSearch={onSearch}
@@ -168,134 +146,105 @@ const StickyControls = memo(
   ),
 );
 
-const SortSheet = ({ visible, selectedId, onSelect, onClose }) => {
-  const { colors } = useTheme();
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <Pressable className="flex-1 justify-end bg-black/50" onPress={onClose}>
-        <Pressable
-          className="rounded-t-3xl bg-surface px-5 pb-8 pt-4"
-          onPress={() => {}}
-        >
-          <AppText variant="title" className="mb-2 text-lg">
-            Sort by
-          </AppText>
-
-          {SORT_OPTIONS.map(option => {
-            const selected = option.id === selectedId;
-
-            return (
-              <Pressable
-                key={option.id}
-                onPress={() => onSelect(option.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                className="h-12 flex-row items-center justify-between border-b border-border"
-              >
-                <AppText
-                  variant={selected ? 'button' : 'bodySmall'}
-                  color={selected ? colors.primary : colors.textPrimary}
-                >
-                  {option.label}
-                </AppText>
-                {selected && <Check size={18} color={colors.primary} />}
-              </Pressable>
-            );
-          })}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-};
-
-// ---------- product row (2 cards) ----------
-
-// memo + primitive props (qty numbers), taaki cart change par sirf wahi row re-render ho
-const ProductRow = memo(
-  ({
-    left,
-    right,
-    leftQty,
-    rightQty,
-    onPress,
-    onAddToCart,
-    onIncrement,
-    onDecrement,
-  }) => (
-    <View className="flex-row px-3.5">
-      <ProductSection
-        product={left}
-        quantity={leftQty}
-        onPress={onPress}
-        onAddToCart={onAddToCart}
-        onIncrement={onIncrement}
-        onDecrement={onDecrement}
-      />
-      {right ? (
-        <ProductSection
-          product={right}
-          quantity={rightQty}
-          onPress={onPress}
-          onAddToCart={onAddToCart}
-          onIncrement={onIncrement}
-          onDecrement={onDecrement}
-        />
-      ) : (
-        // odd number of products: khaali jagah, card jaisi hi margin
-        <View className="mx-1.5 flex-1" />
-      )}
-    </View>
-  ),
-);
-
 const Greeting = memo(() => {
-  const { colors } = useTheme();
-
+  const { colors, isDark, toggleTheme } = useTheme();
   return (
-    <View className="px-5 pb-3 pt-4">
-      <AppText variant="title" className="text-2xl">
-        Discover
-      </AppText>
-      <AppText variant="caption" color={colors.textSecondary}>
-        Find the best products for you
-      </AppText>
+    <View className="flex-row items-center justify-between px-5 pb-3 pt-4">
+      <View className="flex-1">
+        <AppText variant="title" className="text-2xl">
+          Discover
+        </AppText>
+        <AppText variant="caption" color={colors.textSecondary}>
+          Find the best products for you
+        </AppText>
+      </View>
+      <Pressable
+        onPress={toggleTheme}
+        accessibilityRole="button"
+        accessibilityLabel={
+          isDark ? 'Switch to light theme' : 'Switch to dark theme'
+        }
+        className="ml-3 h-11 w-11 items-center justify-center rounded-xl border"
+        style={{
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+        }}
+      >
+        {isDark ? (
+          <Sun size={21} color={colors.primary} />
+        ) : (
+          <Moon size={21} color={colors.primary} />
+        )}
+      </Pressable>
     </View>
   );
 });
 
 const HomeScreen = () => {
   const { colors } = useTheme();
-  const navigation = useNavigation()
+  const dispatch = useDispatch();
+  const navigation = useNavigation();
+  const cartItems = useSelector(state => state.cart.items);
+  const wishlistItems = useSelector(state => state.wishlist.items);
   const [categories, setCategories] = useState([]);
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [sortId, setSortId] = useState('relevance');
   const [sortVisible, setSortVisible] = useState(false);
-
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState('loading');
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [cart, setCart] = useState({});
+  const [greetingHeight, setGreetingHeight] = useState(0);
+  const [controlsHeight, setControlsHeight] = useState(0);
   const generation = useRef(0);
   const loadMoreLock = useRef(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
+  const onScroll = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: false,
+      }),
+    [scrollY],
+  );
+  const controlsTranslateY = useMemo(() => {
+    const h = Math.max(greetingHeight, 1);
+    return scrollY.interpolate({
+      inputRange: [-100, 0, h],
+      outputRange: [h + 100, h, 0],
+      extrapolateLeft: 'extend',
+      extrapolateRight: 'clamp',
+    });
+  }, [scrollY, greetingHeight]);
+  const handleGreetingLayout = useCallback(event => {
+    setGreetingHeight(Math.round(event.nativeEvent.layout.height));
+  }, []);
+  const handleControlsLayout = useCallback(event => {
+    setControlsHeight(Math.round(event.nativeEvent.layout.height));
+  }, []);
   const sort = useMemo(
     () => SORT_OPTIONS.find(option => option.id === sortId)?.api ?? null,
     [sortId],
   );
+  const cart = useMemo(
+    () => Object.fromEntries(cartItems.map(item => [item.id, item.quantity])),
+    [cartItems],
+  );
+  const wishlistIds = useMemo(
+    () => new Set(wishlistItems.map(item => item.id)),
+    [wishlistItems],
+  );
+  const handleWishlist = useCallback(
+    product => {
+      dispatch(toggleWishlist(product));
+    },
+    [dispatch],
+  );
   const fetchPage = useCallback(
     (skip, signal) => {
       const options = { limit: PAGE_SIZE, skip, sort, signal };
-
       if (query) {
         return searchProducts(query, options);
       }
@@ -306,13 +255,11 @@ const HomeScreen = () => {
     },
     [query, selectedCategory, sort],
   );
-
   const loadFirstPage = useCallback(
     async signal => {
       const current = ++generation.current;
       loadMoreLock.current = false;
       setLoadingMore(false);
-
       try {
         const data = await fetchPage(0, signal);
         if (current !== generation.current) {
@@ -331,14 +278,13 @@ const HomeScreen = () => {
     },
     [fetchPage],
   );
+
   useEffect(() => {
     const controller = new AbortController();
-
     setStatus('loading');
     setProducts([]);
     setTotal(0);
     loadFirstPage(controller.signal);
-
     return () => controller.abort();
   }, [loadFirstPage]);
 
@@ -347,7 +293,7 @@ const HomeScreen = () => {
 
     getCategories(controller.signal)
       .then(data => setCategories((data ?? []).map(toCategory)))
-      .catch(() => {});
+      .catch(() => { });
 
     return () => controller.abort();
   }, []);
@@ -363,200 +309,175 @@ const HomeScreen = () => {
     }
 
     const current = generation.current;
+
     loadMoreLock.current = true;
     setLoadingMore(true);
 
     try {
       const data = await fetchPage(products.length);
+
       if (current !== generation.current) {
         return;
       }
+
       const next = data.products.map(normalizeProduct);
+
       setProducts(prev => {
         const seen = new Set(prev.map(item => item.id));
         return [...prev, ...next.filter(item => !seen.has(item.id))];
       });
+
       setTotal(data.total);
-    } catch {
-    } finally {
+    }finally {
       if (current === generation.current) {
         loadMoreLock.current = false;
         setLoadingMore(false);
       }
     }
   }, [status, products.length, total, fetchPage]);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadFirstPage();
-    setRefreshing(false);
+    try {
+      await loadFirstPage();
+    } finally {
+      setRefreshing(false);
+    }
   }, [loadFirstPage]);
-
   const retry = useCallback(() => {
     setStatus('loading');
     loadFirstPage();
   }, [loadFirstPage]);
-
   const handleSearch = useCallback(text => {
     setQuery(text);
     if (text) {
       setSelectedCategory(null);
     }
   }, []);
-
   const handleSelectCategory = useCallback(categoryId => {
     setSelectedCategory(categoryId);
     setQuery('');
   }, []);
-
   const handleOpenSort = useCallback(() => setSortVisible(true), []);
   const handleCloseSort = useCallback(() => setSortVisible(false), []);
   const handleSelectSort = useCallback(id => {
     setSortId(id);
     setSortVisible(false);
   }, []);
-
   const handleProductPress = useCallback(
-  product => {
-    navigation.navigate('ProductDetails', {
-      productId: product.id,
-      product,
-    });
-  },
-  [navigation],
-);
-
-  const handleAddToCart = useCallback(product => {
-    setCart(prev => ({ ...prev, [product.id]: 1 }));
-  }, []);
-
-  const handleIncrement = useCallback(product => {
-    setCart(prev => ({ ...prev, [product.id]: (prev[product.id] ?? 0) + 1 }));
-  }, []);
-
-  const handleDecrement = useCallback(product => {
-    setCart(prev => {
-      const nextQty = (prev[product.id] ?? 0) - 1;
-      if (nextQty <= 0) {
-        const { [product.id]: _removed, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [product.id]: nextQty };
-    });
-  }, []);
-  const listData = useMemo(() => {
-    const items = [{ type: 'controls', key: 'controls' }];
-
-    if (products.length === 0) {
-      items.push({
-        type: status === 'idle' ? 'empty' : status,
-        key: 'status',
+    product => {
+      navigation.navigate('ProductDetails', {
+        productId: product.id,
+        product,
       });
-      return items;
-    }
-
-    for (let i = 0; i < products.length; i += 2) {
-      items.push({
-        type: 'row',
-        key: `row-${products[i].id}`,
-        left: products[i],
-        right: products[i + 1] ?? null,
-      });
-    }
-    return items;
-  }, [products, status]);
-
+    },
+    [navigation],
+  );
+  const handleAddToCart = useCallback(
+    product => {
+      dispatch(addToCart(product));
+    },
+    [dispatch],
+  );
+  const handleIncrement = useCallback(
+    product => {
+      dispatch(incrementQuantity(product.id));
+    },
+    [dispatch],
+  );
+  const handleDecrement = useCallback(
+    product => {
+      dispatch(decrementQuantity(product.id));
+    },
+    [dispatch],
+  );
+  const gridData = useMemo(
+    () => (products.length % 2 === 1 ? [...products, SPACER] : products),
+    [products],
+  );
   const renderItem = useCallback(
     ({ item }) => {
-      switch (item.type) {
-        case 'controls':
-          return (
-            <StickyControls
-              query={query}
-              onSearch={handleSearch}
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onSelectCategory={handleSelectCategory}
-              sortActive={sortId !== 'relevance'}
-              onOpenSort={handleOpenSort}
-            />
-          );
-
-        case 'row':
-          return (
-            <ProductRow
-              left={item.left}
-              right={item.right}
-              leftQty={cart[item.left.id] ?? 0}
-              rightQty={item.right ? (cart[item.right.id] ?? 0) : 0}
-              onPress={handleProductPress}
-              onAddToCart={handleAddToCart}
-              onIncrement={handleIncrement}
-              onDecrement={handleDecrement}
-            />
-          );
-
-        case 'loading':
-          return (
-            <View className="items-center py-16">
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          );
-
-        case 'error':
-          return (
-            <View className="items-center px-8 py-16">
-              <AppText variant="title" className="text-center text-base">
-                Something went wrong
-              </AppText>
-              <AppText
-                variant="caption"
-                color={colors.textSecondary}
-                className="mb-4 mt-1 text-center"
-              >
-                Could not load products. Check your internet and try again.
-              </AppText>
-              <AppButton title="Retry" size="sm" onPress={retry} />
-            </View>
-          );
-
-        case 'empty':
-          return (
-            <View className="items-center px-8 py-16">
-              <AppText variant="title" className="text-center text-base">
-                No products found
-              </AppText>
-              <AppText
-                variant="caption"
-                color={colors.textSecondary}
-                className="mt-1 text-center"
-              >
-                Try a different search or category.
-              </AppText>
-            </View>
-          );
-
-        default:
-          return null;
+      if (item.isSpacer) {
+        return <View className="mx-1.5 flex-1" />;
       }
+      return (
+        <ProductSection
+          product={item}
+          quantity={cart[item.id] ?? 0}
+          isWishlisted={wishlistIds.has(item.id)}
+          onWishlist={handleWishlist}
+          onPress={handleProductPress}
+          onAddToCart={handleAddToCart}
+          onIncrement={handleIncrement}
+          onDecrement={handleDecrement}
+        />
+      );
     },
     [
-      query,
-      categories,
-      selectedCategory,
-      sortId,
       cart,
-      colors,
-      retry,
-      handleSearch,
-      handleSelectCategory,
-      handleOpenSort,
+      wishlistIds,
+      handleWishlist,
       handleProductPress,
       handleAddToCart,
       handleIncrement,
       handleDecrement,
     ],
   );
+  const listHeader = useMemo(
+    () => (
+      <View>
+        <View onLayout={handleGreetingLayout}>
+          <Greeting />
+        </View>
+        <View style={{ height: controlsHeight }} />
+      </View>
+    ),
+    [handleGreetingLayout, controlsHeight],
+  );
+  const emptyState = useMemo(() => {
+    if (status === 'loading') {
+      return (
+        <View className="items-center py-16">
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      );
+    }
+
+    if (status === 'error') {
+      return (
+        <View className="items-center px-8 py-16">
+          <AppText variant="title" className="text-center text-base">
+            Something went wrong
+          </AppText>
+
+          <AppText
+            variant="caption"
+            color={colors.textSecondary}
+            className="mb-4 mt-1 text-center"
+          >
+            Could not load products. Check your internet and try again.
+          </AppText>
+
+          <AppButton title="Retry" size="sm" onPress={retry} />
+        </View>
+      );
+    }
+
+    return (
+      <View className="items-center px-8 py-16">
+        <AppText variant="title" className="text-center text-base">
+          No products found
+        </AppText>
+
+        <AppText
+          variant="caption"
+          color={colors.textSecondary}
+          className="mt-1 text-center"
+        >
+          Try a different search or category.
+        </AppText>
+      </View>
+    );
+  }, [status, colors, retry]);
 
   const listFooter = loadingMore ? (
     <View className="items-center py-4">
@@ -573,31 +494,61 @@ const HomeScreen = () => {
   ) : null;
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-background">
-      <FlatList
-        data={listData}
-        keyExtractor={item => item.key}
-        renderItem={renderItem}
-        ListHeaderComponent={Greeting}
-        ListFooterComponent={listFooter}
-        stickyHeaderIndices={[1]}
-        removeClippedSubviews={false}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
+    <AppSafeAreaView bottom={false} className="flex-1 bg-background">
+      {/* Andar ka View: overlay ka top:0 safe-area ke neeche se shuru ho */}
+      <View className="flex-1">
+        <AppList
+          data={gridData}
+          keyExtractor={item => String(item.id)}
+          renderItem={renderItem}
+          numColumns={2}
+          columnWrapperStyle={{ paddingHorizontal: 14 }}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={emptyState}
+          ListFooterComponent={listFooter}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          removeClippedSubviews={false}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={6}
+          windowSize={7}
+          contentContainerClassName="pb-6"
+        />
+        <Animated.View
+          pointerEvents="box-none"
+          onLayout={handleControlsLayout}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            opacity: greetingHeight > 0 ? 1 : 0,
+            transform: [{ translateY: controlsTranslateY }],
+          }}
+        >
+          <StickyControls
+            query={query}
+            onSearch={handleSearch}
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={handleSelectCategory}
+            sortActive={sortId !== 'relevance'}
+            onOpenSort={handleOpenSort}
           />
-        }
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        initialNumToRender={4}
-        windowSize={7}
-        contentContainerClassName="pb-6"
-      />
+        </Animated.View>
+      </View>
 
       <SortSheet
         visible={sortVisible}
@@ -605,7 +556,7 @@ const HomeScreen = () => {
         onSelect={handleSelectSort}
         onClose={handleCloseSort}
       />
-    </SafeAreaView>
+    </AppSafeAreaView>
   );
 };
 

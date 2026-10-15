@@ -32,7 +32,8 @@
     "react-native-svg": "^15.15.5",
     "react-native-toast-message": "^2.5.2",
     "react-native-worklets": "^0.13.0",
-    "react-redux": "^9.3.0"
+    "react-redux": "^9.3.0",
+    "redux-persist": "^6.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
