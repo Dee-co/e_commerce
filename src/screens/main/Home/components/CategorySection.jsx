@@ -18,11 +18,10 @@ const CategorySection = ({
         onPress={() => onSelectCategory(categoryId)}
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
-        className={`mr-2.5 h-[38px] items-center justify-center rounded-full border px-4 ${
-          isSelected
+        className={`mr-2.5 h-[38px] items-center justify-center rounded-full border px-4 ${isSelected
             ? 'border-primary bg-primary'
             : 'border-border bg-surface'
-        }`}
+          }`}
       >
         <AppText
           variant={isSelected ? 'button' : 'bodySmall'}

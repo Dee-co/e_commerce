@@ -1,12 +1,13 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {darkColors, lightColors} from '../theme/colors';
+import { darkColors, lightColors } from '../theme/colors';
 
 const ThemeContext = createContext(null);
 
@@ -43,55 +44,54 @@ const createThemeVars = colors => ({
   '--color-warning': toRgb(colors.warning),
 });
 
-export const ThemeProvider = ({children}) => {
-  // Default = LIGHT
+export const ThemeProvider = ({ children }) => {
+  // Default = LIGHT (sirf tab jab koi saved theme na ho)
   const [isDark, setIsDark] = useState(false);
   const [isThemeLoading, setIsThemeLoading] = useState(true);
 
   // Restore saved theme
   useEffect(() => {
+    let isMounted = true;
+
     const loadTheme = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem(THEME_KEY);
 
-        if (savedTheme === 'dark') {
-          setIsDark(true);
-        } else {
-          // light is default
-          setIsDark(false);
+        if (isMounted) {
+          setIsDark(savedTheme === 'dark');
         }
       } catch (error) {
         console.log('THEME LOAD ERROR:', error);
-        setIsDark(false);
       } finally {
-        setIsThemeLoading(false);
+        // setIsDark aur ye ek hi batch mein chalte hain, to beech mein light frame nahi aata
+        if (isMounted) {
+          setIsThemeLoading(false);
+        }
       }
     };
 
     loadTheme();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const colors = isDark ? darkColors : lightColors;
 
-  const themeVars = useMemo(
-    () => createThemeVars(colors),
-    [colors],
-  );
+  const themeVars = useMemo(() => createThemeVars(colors), [colors]);
 
-  const toggleTheme = async () => {
+  const toggleTheme = useCallback(async () => {
     const newIsDark = !isDark;
 
     setIsDark(newIsDark);
 
     try {
-      await AsyncStorage.setItem(
-        THEME_KEY,
-        newIsDark ? 'dark' : 'light',
-      );
+      await AsyncStorage.setItem(THEME_KEY, newIsDark ? 'dark' : 'light');
     } catch (error) {
       console.log('THEME SAVE ERROR:', error);
     }
-  };
+  }, [isDark]);
 
   const value = useMemo(
     () => ({
@@ -101,13 +101,14 @@ export const ThemeProvider = ({children}) => {
       themeVars,
       isThemeLoading,
     }),
-    [colors, isDark, themeVars, isThemeLoading],
+    [colors, isDark, toggleTheme, themeVars, isThemeLoading],
   );
+  if (isThemeLoading) {
+    return null;
+  }
 
   return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 };
 

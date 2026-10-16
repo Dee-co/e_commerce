@@ -14,10 +14,12 @@ import { useTheme } from '../context/ThemeContext';
 const RootNavigator = () => {
   const { colors, isDark } = useTheme();
 
+  const baseTheme = isDark ? DarkTheme : DefaultTheme;
+
   const navTheme = {
-    ...(!isDark ? DarkTheme : DefaultTheme),
+    ...baseTheme,
     colors: {
-      ...(!isDark ? DarkTheme.colors : DefaultTheme.colors),
+      ...baseTheme.colors,
       background: colors.background,
       card: colors.surface,
       text: colors.textPrimary,
@@ -34,7 +36,7 @@ const RootNavigator = () => {
       }}
     >
       <StatusBar
-        barStyle={!isDark ? 'light-content' : 'dark-content'}
+        barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
         translucent
       />

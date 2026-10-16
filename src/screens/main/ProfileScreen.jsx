@@ -19,7 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 const ProfileScreen = () => {
   const { colors } = useTheme();
-  const  user  = "";
+  const user = "";
   const [loggingOut, setLoggingOut] = useState(false);
   const navigation = useNavigation();
   const firstLetter = user?.name?.trim()?.charAt(0)?.toUpperCase() || 'U';
@@ -33,7 +33,7 @@ const ProfileScreen = () => {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-         
+
         },
       },
     ]);

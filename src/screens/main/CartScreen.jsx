@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { ShoppingCart, Trash2 } from 'lucide-react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import Toast from 'react-native-toast-message';
 
 import AppSafeAreaView from '../../components/ui/AppSafeAreaView';
 import AppText from '../../components/ui/AppText';
@@ -10,13 +11,17 @@ import AppQuantityButton from '../../components/ui/AppQuantityButton';
 import { useTheme } from '../../context/ThemeContext';
 
 import {
+  clearCart,
   incrementQuantity,
   decrementQuantity,
   removeFromCart,
 } from '../../store/slices/cartSlice';
 import { toggleWishlist } from '../../store/slices/wishlistSlice';
+import { cancelCartReminder } from '../../services/notificationService';
 import AppList from '../../components/ui/AppList';
 import { useNavigation } from '@react-navigation/native';
+import AppImage from '../../components/ui/AppImage';
+
 const getProductPrice = product => {
   const price = product?.price;
 
@@ -35,25 +40,17 @@ const getProductPrice = product => {
   return Number.isFinite(variantPrice) ? variantPrice : 0;
 };
 
-const getProductCurrency = product => {
-  return (
-    product?.price?.currency ||
-    product?.variants?.[0]?.currency ||
-    product?.currency ||
-    'USD'
-  );
-};
-
-const formatPrice = (amount, currency) => {
+// Rupee symbol seedha lagaya hai, currency code ki zaroorat nahi
+const formatPrice = amount => {
   const safeAmount = Number.isFinite(amount) ? amount : 0;
 
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-    }).format(safeAmount);
+    return `₹${safeAmount.toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   } catch {
-    return `${currency} ${safeAmount.toFixed(2)}`;
+    return `₹${safeAmount.toFixed(2)}`;
   }
 };
 
@@ -101,67 +98,72 @@ const CartScreen = () => {
     [cartItems],
   );
 
-  const currency = getProductCurrency(cartItems[0]);
+  const completePurchase = () => {
+    dispatch(clearCart());
+    cancelCartReminder();
 
- 
-const confirmRemove = product => {
-  const alreadyWishlisted = wishlistItems.some(
-    item => item.id === product.id,
-  );
-
-  const buttons = [
-    { text: 'Cancel', style: 'cancel' },
-    {
-      text: 'Remove',
-      style: 'destructive',
-      onPress: () => dispatch(removeFromCart(product.id)),
-    },
-  ];
-
-  if (!alreadyWishlisted) {
-    buttons.push({
-      text: 'Move to Wishlist',
-      onPress: () => {
-        dispatch(toggleWishlist(product));
-        dispatch(removeFromCart(product.id));
-      },
+    Toast.show({
+      type: 'success',
+      text1: 'Order placed',
+      text2: 'Thank you for shopping with us.',
     });
-  }
+  };
 
-  Alert.alert(
-    'Remove product',
-    `What would you like to do with ${product.name || product.title}?`,
-    buttons,
-    { cancelable: true },
-  );
-};
+  const handleCheckout = () => {
+    Alert.alert(
+      'Place order',
+      `Pay ${formatPrice(subtotal)} for ${totalItems} ${totalItems === 1 ? 'item' : 'items'
+      }?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Place Order', onPress: completePurchase },
+      ],
+    );
+  };
 
+  const confirmRemove = product => {
+    const alreadyWishlisted = wishlistItems.some(
+      item => item.id === product.id,
+    );
+
+    const buttons = [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => dispatch(removeFromCart(product.id)),
+      },
+    ];
+
+    if (!alreadyWishlisted) {
+      buttons.push({
+        text: 'Move to Wishlist',
+        onPress: () => {
+          dispatch(toggleWishlist(product));
+          dispatch(removeFromCart(product.id));
+        },
+      });
+    }
+
+    Alert.alert(
+      'Remove product',
+      `What would you like to do with ${product.name || product.title}?`,
+      buttons,
+      { cancelable: true },
+    );
+  };
 
   const renderItem = ({ item }) => {
     const imageUrl = getProductImage(item);
     const productName = item.name || item.title || 'Product';
     const price = getProductPrice(item);
-    const itemCurrency = getProductCurrency(item);
     const quantity = Number(item.quantity) || 0;
     const itemTotal = price * quantity;
 
     return (
       <View className="mb-4 flex-row rounded-2xl border border-border bg-surface p-3">
         <View className="h-28 w-24 overflow-hidden rounded-xl bg-surfaceLight">
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              className="h-full w-full"
-              resizeMode="contain"
-              onError={() =>
-                console.log('Failed to load cart image:', imageUrl)
-              }
-            />
-          ) : (
-            <View className="flex-1 items-center justify-center">
-              <ShoppingCart size={25} color={colors.textMuted} />
-            </View>
-          )}
+          <AppImage uri={imageUrl} resizeMode="contain" className="h-full w-full" />
         </View>
 
         <View className="ml-3 flex-1 justify-between">
@@ -175,11 +177,11 @@ const confirmRemove = product => {
               color={colors.textSecondary}
               className="mt-1"
             >
-              {formatPrice(price, itemCurrency)} each
+              {formatPrice(price)} each
             </AppText>
 
             <AppText variant="title" color={colors.primary} className="mt-1">
-              {formatPrice(itemTotal, itemCurrency)}
+              {formatPrice(itemTotal)}
             </AppText>
           </View>
 
@@ -268,25 +270,21 @@ const confirmRemove = product => {
                   Subtotal ({totalItems} items)
                 </AppText>
 
-                <AppText variant="bodySmall">
-                  {formatPrice(subtotal, currency)}
-                </AppText>
+                <AppText variant="bodySmall">{formatPrice(subtotal)}</AppText>
               </View>
 
               <View className="mb-4 flex-row justify-between">
                 <AppText variant="title">Total</AppText>
 
                 <AppText variant="title" color={colors.primary}>
-                  {formatPrice(subtotal, currency)}
+                  {formatPrice(subtotal)}
                 </AppText>
               </View>
 
               <AppButton
                 title="Proceed to Checkout"
                 fullWidth
-                onPress={() =>
-                  Alert.alert('Checkout', 'Connect your checkout screen here.')
-                }
+                onPress={handleCheckout}
               />
             </View>
           </View>

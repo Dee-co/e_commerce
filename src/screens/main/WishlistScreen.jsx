@@ -1,8 +1,6 @@
-
 import React from 'react';
 import {
   Alert,
-  Image,
   Pressable,
   View,
 } from 'react-native';
@@ -18,6 +16,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 import { toggleWishlist } from '../../store/slices/wishlistSlice';
 import { addToCart } from '../../store/slices/cartSlice';
+import AppImage from '../../components/ui/AppImage';
 
 const getProductPrice = product => {
   const price = product?.price;
@@ -37,21 +36,16 @@ const getProductPrice = product => {
 
   return Number.isFinite(variantPrice) ? variantPrice : 0;
 };
+const formatPrice = amount => {
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
 
-const getProductCurrency = product =>
-  product?.price?.currency ||
-  product?.variants?.[0]?.currency ||
-  product?.currency ||
-  'USD';
-
-const formatPrice = (amount, currency) => {
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return `₹${safeAmount.toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   } catch {
-    return `${currency} ${(Number.isFinite(amount) ? amount : 0).toFixed(2)}`;
+    return `₹${safeAmount.toFixed(2)}`;
   }
 };
 
@@ -75,12 +69,14 @@ const WishlistScreen = () => {
   const dispatch = useDispatch();
   const { colors } = useTheme();
   const wishlist = useSelector(state => state.wishlist.items);
+
   const openProduct = item => {
     navigation.navigate('ProductDetails', {
       productId: item.id,
       product: item,
     });
   };
+
   const confirmRemove = item => {
     Alert.alert(
       'Remove from Wishlist',
@@ -109,7 +105,6 @@ const WishlistScreen = () => {
     const productName = item.name || item.title || 'Product';
     const imageUrl = getProductImage(item);
     const price = getProductPrice(item);
-    const currency = getProductCurrency(item);
 
     return (
       <Pressable
@@ -121,17 +116,7 @@ const WishlistScreen = () => {
         }}
       >
         <View className="h-28 w-24 overflow-hidden rounded-xl bg-surfaceLight">
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              className="h-full w-full"
-              resizeMode="contain"
-            />
-          ) : (
-            <View className="flex-1 items-center justify-center">
-              <Heart size={28} color={colors.textMuted} />
-            </View>
-          )}
+          <AppImage uri={imageUrl} resizeMode="contain" className="h-full w-full" />
         </View>
 
         <View className="ml-3 flex-1 justify-between">
@@ -145,11 +130,11 @@ const WishlistScreen = () => {
             </AppText>
 
             <AppText
-              variant="heading"
+              variant="title"
               className="mt-2 text-lg font-bold"
               color={colors.primary}
             >
-              {formatPrice(price, currency)}
+              {formatPrice(price)}
             </AppText>
           </View>
 

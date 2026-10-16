@@ -1,4 +1,3 @@
-// utils/normalizeProduct.js
 
 export const normalizeProduct = (product = {}) => {
   const price = Number(product.price ?? 0);
@@ -8,8 +7,6 @@ export const normalizeProduct = (product = {}) => {
 
   return {
     ...product,
-
-    // ProductSection ke format ke fields
     name: product.title ?? '',
     brand: product.brand ?? '',
     image: {

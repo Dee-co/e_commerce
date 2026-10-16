@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import {
   Heart,
   ImageOff,
@@ -11,6 +11,7 @@ import {
 import AppText from '../../../../components/ui/AppText';
 import AppButton from '../../../../components/ui/AppButton';
 import AppQuantityButton from '../../../../components/ui/AppQuantityButton';
+import AppImage from '../../../../components/ui/AppImage';
 import { useTheme } from '../../../../context/ThemeContext';
 import { useDispatch } from 'react-redux';
 const SHADOW = {
@@ -128,15 +129,7 @@ const ProductSection = ({
         className="grow overflow-hidden rounded-2xl border border-border active:opacity-[0.94]"
       >
         <View className="aspect-[1.15] items-center justify-center bg-surfaceLight">
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              resizeMode="cover"
-              className="h-full w-full"
-            />
-          ) : (
-            <ImageOff size={28} color={colors.textMuted} />
-          )}
+          <AppImage uri={imageUrl} resizeMode="cover" className="h-full w-full" />
           {!isAvailable && (
             <View
               pointerEvents="none"
